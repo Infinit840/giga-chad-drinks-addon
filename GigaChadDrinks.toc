@@ -1,0 +1,7 @@
+## Interface: 120105
+## Title: Giga Chad Drinks
+## Notes: Chads Together. Legends Forever.
+## Author: Infinit840
+## Version: 0.1.0
+
+GigaChadDrinks.lua
