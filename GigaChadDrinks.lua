@@ -1,5 +1,7 @@
 local frame = CreateFrame("Frame")
 GigaChadDrinksDB = GigaChadDrinksDB or {}
+GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
+local activeSession = nil
 
 local function SaveCharacterSnapshot()
     local name, realm = UnitFullName("player")
@@ -48,12 +50,23 @@ gear[slot] = {
         items = gear
     }
 end
+local function SaveSession()
+    GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
+    local session = {
+        timestamp = time(),
+        character = GigaChadDrinksDB.character,
+        gear = GigaChadDrinksDB.gear
+    }
 
+    table.insert(GigaChadDrinksDB.sessions, session)
+return session
+end
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function()
     SaveCharacterSnapshot()
     SaveGearSnapshot()
+    
 
     print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
 end)
@@ -79,6 +92,30 @@ chadWindow.text:SetPoint("CENTER", 0, 10)
 chadWindow.text:SetText("Die Bar ist geöffnet.")
 
 SlashCmdList["GIGACHADDRINKS"] = function()
+  local startSessionButton = CreateFrame("Button", nil, chadWindow, "UIPanelButtonTemplate")
+startSessionButton:SetSize(160, 30)
+startSessionButton:SetPoint("CENTER", 0, -40)
+startSessionButton:SetText("SESSION STARTEN")
+
+startSessionButton:SetScript("OnClick", function()
+    if activeSession then
+        activeSession.endTimestamp = time()
+
+        print("|cff00ff00Giga Chad Drinks:|r Session beendet.")
+
+        activeSession = nil
+        startSessionButton:SetText("SESSION STARTEN")
+    else
+        SaveCharacterSnapshot()
+        SaveGearSnapshot()
+
+        activeSession = SaveSession()
+
+        startSessionButton:SetText("SESSION BEENDEN")
+
+        print("|cff00ff00Giga Chad Drinks:|r Session gestartet.")
+    end
+end)
     if chadWindow:IsShown() then
         chadWindow:Hide()
     else
