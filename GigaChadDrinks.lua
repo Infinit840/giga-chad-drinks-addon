@@ -50,13 +50,48 @@ gear[slot] = {
         items = gear
     }
 end
+local function GetGroupSnapshot()
+    local group = {}
+
+    local playerName, playerRealm = UnitFullName("player")
+
+    table.insert(group, {
+        name = playerName,
+        realm = playerRealm
+    })
+
+    if IsInGroup() then
+        for i = 1, GetNumGroupMembers() - 1 do
+            local unit = "party" .. i
+
+            if UnitExists(unit) then
+                local name, realm = UnitFullName(unit)
+
+                table.insert(group, {
+                    name = name,
+                    realm = realm
+                })
+            end
+        end
+    end
+
+    return group
+end
 local function SaveSession()
     GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
+    local instanceName, instanceType, difficultyID, difficultyName = GetInstanceInfo()
     local session = {
-        timestamp = time(),
-        character = GigaChadDrinksDB.character,
-        gear = GigaChadDrinksDB.gear
-    }
+    timestamp = time(),
+    zone = GetZoneText(),
+    subZone = GetSubZoneText(),
+    instanceName = instanceName,
+    instanceType = instanceType,
+    difficultyID = difficultyID,
+    difficultyName = difficultyName,
+    group = GetGroupSnapshot(),
+    character = GigaChadDrinksDB.character,
+    gear = GigaChadDrinksDB.gear
+}
 
     table.insert(GigaChadDrinksDB.sessions, session)
 return session
@@ -108,7 +143,32 @@ startSessionButton:SetScript("OnClick", function()
     else
         SaveCharacterSnapshot()
         SaveGearSnapshot()
+        local function GetGroupSnapshot()
+    local group = {}
+    local playerName, playerRealm = UnitFullName("player")
 
+table.insert(group, {
+    name = playerName,
+    realm = playerRealm
+})
+
+    if IsInGroup() then
+        for i = 1, GetNumGroupMembers() - 1 do
+            local unit = "party" .. i
+
+            if UnitExists(unit) then
+                local name, realm = UnitFullName(unit)
+
+                table.insert(group, {
+                    name = name,
+                    realm = realm
+                })
+            end
+        end
+    end
+
+    return group
+end
         activeSession = SaveSession()
 
         startSessionButton:SetText("SESSION BEENDEN")
