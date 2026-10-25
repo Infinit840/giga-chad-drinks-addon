@@ -1,10 +1,68 @@
 local frame = CreateFrame("Frame")
+GigaChadDrinksDB = GigaChadDrinksDB or {}
+
+local function SaveCharacterSnapshot()
+    local name, realm = UnitFullName("player")
+    local _, class = UnitClass("player")
+    local level = UnitLevel("player")
+
+    local specIndex = GetSpecialization()
+    local specName = "Unknown"
+
+    if specIndex then
+        local _, nameOfSpec = GetSpecializationInfo(specIndex)
+        specName = nameOfSpec
+    end
+
+    local averageItemLevel, equippedItemLevel = GetAverageItemLevel()
+
+    GigaChadDrinksDB.character = {
+        name = name,
+        realm = realm,
+        class = class,
+        spec = specName,
+        level = level,
+        averageItemLevel = averageItemLevel,
+        equippedItemLevel = equippedItemLevel,
+        timestamp = time()
+    }
+end
+local function SaveGearSnapshot()
+    local gear = {}
+
+    for slot = 1, 19 do
+        local itemLink = GetInventoryItemLink("player", slot)
+
+        if itemLink then
+            local itemID = GetInventoryItemID("player", slot)
+
+gear[slot] = {
+    itemID = itemID,
+    itemLink = itemLink
+}
+        end
+    end
+
+    GigaChadDrinksDB.gear = {
+        timestamp = time(),
+        items = gear
+    }
+end
 
 frame:RegisterEvent("PLAYER_LOGIN")
 
 frame:SetScript("OnEvent", function()
+    SaveCharacterSnapshot()
+    SaveGearSnapshot()
+
     print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
 end)
+
+
+
+    
+
+ 
 SLASH_GIGACHADDRINKS1 = "/chad"
 
 local chadWindow = CreateFrame("Frame", "GigaChadDrinksWindow", UIParent, "BasicFrameTemplateWithInset")
