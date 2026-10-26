@@ -2,6 +2,7 @@ local frame = CreateFrame("Frame")
 GigaChadDrinksDB = GigaChadDrinksDB or {}
 GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
 local activeSession = nil
+local combatLogActive = false
 
 local function SaveCharacterSnapshot()
     local name, realm = UnitFullName("player")
@@ -86,9 +87,32 @@ local function StartCombatLog()
         print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
     end
 end
+local function StartCombatLog()
+    local success = LoggingCombat(true)
+
+    if success then
+        combatLogActive = true
+        print("|cff00ff00Giga Chad Drinks:|r Combatlog gestartet.")
+    else
+        combatLogActive = false
+        print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
+    end
+end
 local function StopCombatLog()
     LoggingCombat(false)
     print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
+end
+local function StopCombatLog()
+    LoggingCombat(false)
+    combatLogActive = false
+    print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
+end
+local function CloseAbandonedSessions()
+    for _, session in ipairs(GigaChadDrinksDB.sessions) do
+        if not session.endTimestamp then
+            session.abandoned = true
+        end
+    end
 end
 local function SaveSession()
     GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
@@ -110,6 +134,14 @@ local function SaveSession()
 return session
 end
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:SetScript("OnEvent", function()
+    CloseAbandonedSessions()
+    SaveCharacterSnapshot()
+    SaveGearSnapshot()
+    StartCombatLog()
+
+    print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
+end)
 
 frame:SetScript("OnEvent", function()
     SaveCharacterSnapshot()
@@ -207,6 +239,7 @@ local tabs = {}
 local panels = {}
 local UpdateCharacterPanel
 local UpdateGroupPanel
+local UpdateLogsPanel
 local tabNames = {
     "Session",
     "Gruppe",
@@ -237,6 +270,10 @@ local function SelectTab(selectedTab)
 
     if selectedTab == 3 and UpdateCharacterPanel then
         UpdateCharacterPanel()
+    end
+
+    if selectedTab == 4 and UpdateLogsPanel then
+        UpdateLogsPanel()
     end
 end
 
@@ -412,6 +449,119 @@ UpdateCharacterPanel = function()
         "Durchschnitt: " .. string.format("%.1f", character.averageItemLevel or 0)
     )
 end
+-- Logs-Tab
+local logsText = panels[4]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+logsText:SetPoint("TOPLEFT", panels[4], "TOPLEFT", 20, -20)
+logsText:SetJustifyH("LEFT")
+
+UpdateLogsPanel = function()
+    local sessionCount = #GigaChadDrinksDB.sessions
+
+    local combatLogStatus
+ if combatLogActive then
+    combatLogStatus = "|cff00ff00AKTIV|r"
+ else
+    combatLogStatus = "|cffff0000INAKTIV|r"
+ end
+
+    local sessionStatus
+    if activeSession then
+        sessionStatus = "|cff00ff00AKTIV|r"
+    else
+        sessionStatus = "|cffff0000INAKTIV|r"
+    end
+
+    local lines = {
+        "LOGS",
+        "",
+        "Combatlog: " .. combatLogStatus,
+        "Session: " .. sessionStatus,
+        "",
+        "Gespeicherte Sessions: " .. tostring(sessionCount)
+    }
+
+    if activeSession then
+        local duration = time() - activeSession.timestamp
+        local hours = math.floor(duration / 3600)
+        local minutes = math.floor((duration % 3600) / 60)
+        local seconds = duration % 60
+
+        local durationText = string.format(
+            "%02d:%02d:%02d",
+            hours,
+            minutes,
+            seconds
+        )
+
+        local groupSize = 1
+
+        if activeSession.group then
+            groupSize = #activeSession.group
+        end
+
+        table.insert(lines, "")
+        table.insert(lines, "AKTUELLE SESSION")
+        table.insert(lines, "")
+        table.insert(lines, "Zone: " .. (activeSession.zone or "Unbekannt"))
+        table.insert(lines, "Instanz: " .. (activeSession.instanceName or "Keine"))
+        table.insert(lines, "Gruppe: " .. tostring(groupSize) .. " Spieler")
+        table.insert(lines, "Laufzeit: " .. durationText)
+    end
+    if sessionCount > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "LETZTE SESSIONS")
+        table.insert(lines, "")
+
+        local firstSession = math.max(1, sessionCount - 4)
+
+        for i = sessionCount, firstSession, -1 do
+            local session = GigaChadDrinksDB.sessions[i]
+
+            local sessionTime = date("%d.%m. %H:%M", session.timestamp)
+            local zone = session.zone or "Unbekannt"
+
+            local durationText = "Abgebrochen"
+
+    if session.endTimestamp then
+                local duration = session.endTimestamp - session.timestamp
+
+                local hours = math.floor(duration / 3600)
+                local minutes = math.floor((duration % 3600) / 60)
+                local seconds = duration % 60
+
+                durationText = string.format(
+                    "%02d:%02d:%02d",
+                    hours,
+                    minutes,
+                    seconds
+                )
+            end
+
+            table.insert(
+                lines,
+                sessionTime ..
+                " | " ..
+                zone ..
+                " | " ..
+                durationText
+            )
+        end
+    end
+    logsText:SetText(table.concat(lines, "\n"))
+end
+local logsUpdateTimer = 0
+
+panels[4]:SetScript("OnUpdate", function(self, elapsed)
+    logsUpdateTimer = logsUpdateTimer + elapsed
+
+    if logsUpdateTimer >= 1 then
+        logsUpdateTimer = 0
+
+        if self:IsShown() and UpdateLogsPanel then
+            UpdateLogsPanel()
+        end
+    end
+end)
 SlashCmdList["GIGACHADDRINKS"] = function()
     if chadWindow:IsShown() then
         chadWindow:Hide()
