@@ -2,6 +2,7 @@ local frame = CreateFrame("Frame")
 GigaChadDrinksDB = GigaChadDrinksDB or {}
 GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
 local activeSession = nil
+local combatLogActive = false
 
 local function SaveCharacterSnapshot()
     local name, realm = UnitFullName("player")
@@ -86,8 +87,24 @@ local function StartCombatLog()
         print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
     end
 end
+local function StartCombatLog()
+    local success = LoggingCombat(true)
+
+    if success then
+        combatLogActive = true
+        print("|cff00ff00Giga Chad Drinks:|r Combatlog gestartet.")
+    else
+        combatLogActive = false
+        print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
+    end
+end
 local function StopCombatLog()
     LoggingCombat(false)
+    print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
+end
+local function StopCombatLog()
+    LoggingCombat(false)
+    combatLogActive = false
     print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
 end
 local function SaveSession()
@@ -426,11 +443,11 @@ UpdateLogsPanel = function()
     local sessionCount = #GigaChadDrinksDB.sessions
 
     local combatLogStatus
-    if LoggingCombat() then
-        combatLogStatus = "|cff00ff00AKTIV|r"
-    else
-        combatLogStatus = "|cffff0000INAKTIV|r"
-    end
+ if combatLogActive then
+    combatLogStatus = "|cff00ff00AKTIV|r"
+ else
+    combatLogStatus = "|cffff0000INAKTIV|r"
+ end
 
     local sessionStatus
     if activeSession then
@@ -439,13 +456,58 @@ UpdateLogsPanel = function()
         sessionStatus = "|cffff0000INAKTIV|r"
     end
 
-    logsText:SetText(
-        "LOGS\n\n" ..
-        "Combatlog: " .. combatLogStatus .. "\n" ..
-        "Session: " .. sessionStatus .. "\n\n" ..
+    local lines = {
+        "LOGS",
+        "",
+        "Combatlog: " .. combatLogStatus,
+        "Session: " .. sessionStatus,
+        "",
         "Gespeicherte Sessions: " .. tostring(sessionCount)
-    )
+    }
+
+    if activeSession then
+        local duration = time() - activeSession.timestamp
+        local hours = math.floor(duration / 3600)
+        local minutes = math.floor((duration % 3600) / 60)
+        local seconds = duration % 60
+
+        local durationText = string.format(
+            "%02d:%02d:%02d",
+            hours,
+            minutes,
+            seconds
+        )
+
+        local groupSize = 1
+
+        if activeSession.group then
+            groupSize = #activeSession.group
+        end
+
+        table.insert(lines, "")
+        table.insert(lines, "AKTUELLE SESSION")
+        table.insert(lines, "")
+        table.insert(lines, "Zone: " .. (activeSession.zone or "Unbekannt"))
+        table.insert(lines, "Instanz: " .. (activeSession.instanceName or "Keine"))
+        table.insert(lines, "Gruppe: " .. tostring(groupSize) .. " Spieler")
+        table.insert(lines, "Laufzeit: " .. durationText)
+    end
+
+    logsText:SetText(table.concat(lines, "\n"))
 end
+local logsUpdateTimer = 0
+
+panels[4]:SetScript("OnUpdate", function(self, elapsed)
+    logsUpdateTimer = logsUpdateTimer + elapsed
+
+    if logsUpdateTimer >= 1 then
+        logsUpdateTimer = 0
+
+        if self:IsShown() and UpdateLogsPanel then
+            UpdateLogsPanel()
+        end
+    end
+end)
 SlashCmdList["GIGACHADDRINKS"] = function()
     if chadWindow:IsShown() then
         chadWindow:Hide()
