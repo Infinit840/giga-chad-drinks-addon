@@ -196,14 +196,14 @@ if GigaChadDrinksDB.windowPosition then
 end
 -- Fenstergröße veränderbar machen
 chadWindow:SetResizable(true)
-chadWindow:SetResizeBounds(320, 180, 800, 600)
+chadWindow:SetResizeBounds(420, 300, 800, 600)
 
 -- Gespeicherte Größe laden
 if GigaChadDrinksDB.windowSize then
-    chadWindow:SetSize(
-        GigaChadDrinksDB.windowSize.width,
-        GigaChadDrinksDB.windowSize.height
-    )
+    local width = math.max(GigaChadDrinksDB.windowSize.width, 420)
+    local height = math.max(GigaChadDrinksDB.windowSize.height, 300)
+
+    chadWindow:SetSize(width, height)
 end
 
 -- Resize-Griff unten rechts
