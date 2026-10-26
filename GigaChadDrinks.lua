@@ -203,13 +203,75 @@ end)
 chadWindow.title = chadWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 chadWindow.title:SetPoint("LEFT", chadWindow.TitleBg, "LEFT", 5, 0)
 chadWindow.title:SetText("Giga Chad Drinks")
+local tabs = {}
+local panels = {}
+local UpdateCharacterPanel
+local tabNames = {
+    "Session",
+    "Gruppe",
+    "Charakter",
+    "Logs"
+}
 
-chadWindow.text = chadWindow:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-chadWindow.text:SetPoint("CENTER", 0, 10)
-chadWindow.text:SetText("Die Bar ist geöffnet.")
+local function SelectTab(selectedTab)
+    for i, tab in ipairs(tabs) do
+        if i == selectedTab then
+            tab:LockHighlight()
+        else
+            tab:UnlockHighlight()
+        end
+    end
+
+    for i, panel in ipairs(panels) do
+        if i == selectedTab then
+            panel:Show()
+        else
+            panel:Hide()
+        end
+    end
+
+    if selectedTab == 3 and UpdateCharacterPanel then
+        UpdateCharacterPanel()
+    end
+end
+
+for i, name in ipairs(tabNames) do
+    local tab = CreateFrame("Button", nil, chadWindow, "UIPanelButtonTemplate")
+
+    tab:SetSize(95, 25)
+    tab:SetText(name)
+
+    if i == 1 then
+        tab:SetPoint("TOPLEFT", chadWindow, "BOTTOMLEFT", 10, 2)
+    else
+        tab:SetPoint("LEFT", tabs[i - 1], "RIGHT", 5, 0)
+    end
+
+    tab:SetScript("OnClick", function()
+        SelectTab(i)
+    end)
+
+    tabs[i] = tab
+end
 
 
-  local startSessionButton = CreateFrame("Button", nil, chadWindow, "UIPanelButtonTemplate")
+for i = 1, #tabNames do
+    local panel = CreateFrame("Frame", nil, chadWindow)
+
+    panel:SetPoint("TOPLEFT", chadWindow, "TOPLEFT", 10, -60)
+    panel:SetPoint("BOTTOMRIGHT", chadWindow, "BOTTOMRIGHT", -10, 10)
+
+    panels[i] = panel
+end
+
+SelectTab(1)
+
+local sessionText = panels[1]:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+sessionText:SetPoint("CENTER", 0, 20)
+sessionText:SetText("Die Bar ist geöffnet.")
+
+
+local startSessionButton = CreateFrame("Button", nil, panels[1], "UIPanelButtonTemplate")
 startSessionButton:SetSize(160, 30)
 startSessionButton:SetPoint("CENTER", 0, -40)
 startSessionButton:SetText("SESSION STARTEN")
@@ -235,6 +297,37 @@ startSessionButton:SetScript("OnClick", function()
         print("|cff00ff00Giga Chad Drinks:|r Session gestartet.")
     end
 end)
+
+-- Charakter-Tab
+local characterText = panels[3]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+characterText:SetPoint("TOPLEFT", panels[3], "TOPLEFT", 20, -20)
+characterText:SetJustifyH("LEFT")
+
+UpdateCharacterPanel = function()
+    SaveCharacterSnapshot()
+
+    local character = GigaChadDrinksDB.character
+
+    if not character then
+        characterText:SetText("Keine Charakterdaten verfügbar.")
+        return
+    end
+
+    local displayName = character.name or "Unknown"
+    if character.realm and character.realm ~= "" then
+        displayName = displayName .. " - " .. character.realm
+    end
+
+    characterText:SetText(
+        "CHARAKTER\n\n" ..
+        displayName .. "\n" ..
+        (character.spec or "Unknown") .. " " .. (character.class or "Unknown") .. "\n" ..
+        "Level: " .. tostring(character.level or "?") .. "\n\n" ..
+        "ITEMLEVEL\n" ..
+        "Ausgerüstet: " .. string.format("%.1f", character.equippedItemLevel or 0) .. "\n" ..
+        "Durchschnitt: " .. string.format("%.1f", character.averageItemLevel or 0)
+    )
+end
 SlashCmdList["GIGACHADDRINKS"] = function()
     if chadWindow:IsShown() then
         chadWindow:Hide()
