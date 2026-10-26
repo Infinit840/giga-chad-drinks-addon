@@ -107,6 +107,13 @@ local function StopCombatLog()
     combatLogActive = false
     print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
 end
+local function CloseAbandonedSessions()
+    for _, session in ipairs(GigaChadDrinksDB.sessions) do
+        if not session.endTimestamp then
+            session.abandoned = true
+        end
+    end
+end
 local function SaveSession()
     GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
     local instanceName, instanceType, difficultyID, difficultyName = GetInstanceInfo()
@@ -127,6 +134,14 @@ local function SaveSession()
 return session
 end
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:SetScript("OnEvent", function()
+    CloseAbandonedSessions()
+    SaveCharacterSnapshot()
+    SaveGearSnapshot()
+    StartCombatLog()
+
+    print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
+end)
 
 frame:SetScript("OnEvent", function()
     SaveCharacterSnapshot()
@@ -492,7 +507,46 @@ UpdateLogsPanel = function()
         table.insert(lines, "Gruppe: " .. tostring(groupSize) .. " Spieler")
         table.insert(lines, "Laufzeit: " .. durationText)
     end
+    if sessionCount > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "LETZTE SESSIONS")
+        table.insert(lines, "")
 
+        local firstSession = math.max(1, sessionCount - 4)
+
+        for i = sessionCount, firstSession, -1 do
+            local session = GigaChadDrinksDB.sessions[i]
+
+            local sessionTime = date("%d.%m. %H:%M", session.timestamp)
+            local zone = session.zone or "Unbekannt"
+
+            local durationText = "Abgebrochen"
+
+    if session.endTimestamp then
+                local duration = session.endTimestamp - session.timestamp
+
+                local hours = math.floor(duration / 3600)
+                local minutes = math.floor((duration % 3600) / 60)
+                local seconds = duration % 60
+
+                durationText = string.format(
+                    "%02d:%02d:%02d",
+                    hours,
+                    minutes,
+                    seconds
+                )
+            end
+
+            table.insert(
+                lines,
+                sessionTime ..
+                " | " ..
+                zone ..
+                " | " ..
+                durationText
+            )
+        end
+    end
     logsText:SetText(table.concat(lines, "\n"))
 end
 local logsUpdateTimer = 0
