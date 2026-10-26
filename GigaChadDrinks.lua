@@ -129,8 +129,77 @@ SLASH_GIGACHADDRINKS1 = "/chad"
 local chadWindow = CreateFrame("Frame", "GigaChadDrinksWindow", UIParent, "BasicFrameTemplateWithInset")
 chadWindow:SetSize(420, 250)
 chadWindow:SetPoint("CENTER")
+chadWindow:SetMovable(true)
+chadWindow:EnableMouse(true)
+chadWindow:RegisterForDrag("LeftButton")
 chadWindow:Hide()
 
+chadWindow:SetScript("OnDragStart", function(self)
+    self:StartMoving()
+end)
+
+chadWindow:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+
+    local point, _, relativePoint, xOfs, yOfs = self:GetPoint()
+
+    GigaChadDrinksDB.windowPosition = {
+        point = point,
+        relativePoint = relativePoint,
+        x = xOfs,
+        y = yOfs
+    }
+end)
+if GigaChadDrinksDB.windowPosition then
+    local pos = GigaChadDrinksDB.windowPosition
+
+    chadWindow:ClearAllPoints()
+    chadWindow:SetPoint(
+        pos.point,
+        UIParent,
+        pos.relativePoint,
+        pos.x,
+        pos.y
+    )
+end
+-- Fenstergröße veränderbar machen
+chadWindow:SetResizable(true)
+chadWindow:SetResizeBounds(320, 180, 800, 600)
+
+-- Gespeicherte Größe laden
+if GigaChadDrinksDB.windowSize then
+    chadWindow:SetSize(
+        GigaChadDrinksDB.windowSize.width,
+        GigaChadDrinksDB.windowSize.height
+    )
+end
+
+-- Resize-Griff unten rechts
+local resizeHandle = CreateFrame("Button", nil, chadWindow)
+resizeHandle:SetSize(20, 20)
+resizeHandle:SetPoint("BOTTOMRIGHT", -4, 4)
+resizeHandle:EnableMouse(true)
+
+resizeHandle:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+resizeHandle:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+resizeHandle:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+
+resizeHandle:SetScript("OnMouseDown", function(self, button)
+    if button == "LeftButton" then
+        chadWindow:StartSizing("BOTTOMRIGHT")
+    end
+end)
+
+resizeHandle:SetScript("OnMouseUp", function(self, button)
+    if button == "LeftButton" then
+        chadWindow:StopMovingOrSizing()
+
+        GigaChadDrinksDB.windowSize = {
+            width = chadWindow:GetWidth(),
+            height = chadWindow:GetHeight()
+        }
+    end
+end)
 chadWindow.title = chadWindow:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 chadWindow.title:SetPoint("LEFT", chadWindow.TitleBg, "LEFT", 5, 0)
 chadWindow.title:SetText("Giga Chad Drinks")
