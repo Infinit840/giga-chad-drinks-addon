@@ -206,6 +206,7 @@ chadWindow.title:SetText("Giga Chad Drinks")
 local tabs = {}
 local panels = {}
 local UpdateCharacterPanel
+local UpdateGroupPanel
 local tabNames = {
     "Session",
     "Gruppe",
@@ -228,6 +229,10 @@ local function SelectTab(selectedTab)
         else
             panel:Hide()
         end
+    end
+
+    if selectedTab == 2 and UpdateGroupPanel then
+        UpdateGroupPanel()
     end
 
     if selectedTab == 3 and UpdateCharacterPanel then
@@ -253,8 +258,6 @@ for i, name in ipairs(tabNames) do
 
     tabs[i] = tab
 end
-
-
 for i = 1, #tabNames do
     local panel = CreateFrame("Frame", nil, chadWindow)
 
@@ -297,7 +300,88 @@ startSessionButton:SetScript("OnClick", function()
         print("|cff00ff00Giga Chad Drinks:|r Session gestartet.")
     end
 end)
+-- Gruppen-Tab
 
+local groupText = panels[2]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+groupText:SetPoint("TOPLEFT", panels[2], "TOPLEFT", 20, -20)
+groupText:SetJustifyH("LEFT")
+
+UpdateGroupPanel = function()
+    local lines = {
+        "GRUPPE",
+        ""
+    }
+
+    local function AddUnit(unit)
+        if not UnitExists(unit) then
+            return
+        end
+
+        local name, realm = UnitFullName(unit)
+        local level = UnitLevel(unit)
+        local className, class = UnitClass(unit)
+        local role = UnitGroupRolesAssigned(unit)
+
+        if not name then
+            return
+        end
+
+        local displayName = name
+
+        if realm and realm ~= "" then
+            displayName = displayName .. " - " .. realm
+        end
+
+        -- Name in Klassenfarbe
+        local color = RAID_CLASS_COLORS[class]
+
+        if color then
+            displayName = color:WrapTextInColorCode(displayName)
+        end
+
+        -- Rollen schöner darstellen
+        local roleNames = {
+            TANK = "Tank",
+            HEALER = "Heiler",
+            DAMAGER = "DPS",
+            NONE = "Keine Rolle"
+        }
+
+        role = roleNames[role] or "Keine Rolle"
+
+        table.insert(
+            lines,
+            displayName ..
+            " | " ..
+            (className or "Unknown") ..
+            " | " ..
+            role ..
+            " | Level " ..
+            tostring(level or "?")
+        )
+    end
+
+    if IsInRaid() then
+        for i = 1, GetNumGroupMembers() do
+            AddUnit("raid" .. i)
+        end
+
+    elseif IsInGroup() then
+        AddUnit("player")
+
+        for i = 1, GetNumSubgroupMembers() do
+            AddUnit("party" .. i)
+        end
+
+    else
+        AddUnit("player")
+
+        table.insert(lines, "")
+        table.insert(lines, "Du bist aktuell in keiner Gruppe.")
+    end
+
+    groupText:SetText(table.concat(lines, "\n"))
+end
 -- Charakter-Tab
 local characterText = panels[3]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 characterText:SetPoint("TOPLEFT", panels[3], "TOPLEFT", 20, -20)
