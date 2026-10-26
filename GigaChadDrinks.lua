@@ -122,17 +122,23 @@ local function SaveSession()
 local session = {
     sessionID = tostring(sessionStart),
     timestamp = sessionStart,
+    endTimestamp = nil,
+    status = "ACTIVE",
+
     encounters = {},
+
     zone = GetZoneText(),
     subZone = GetSubZoneText(),
     instanceName = instanceName,
     instanceType = instanceType,
     difficultyID = difficultyID,
     difficultyName = difficultyName,
+
     group = GetGroupSnapshot(),
     character = GigaChadDrinksDB.character,
     gear = GigaChadDrinksDB.gear
 }
+
 
     table.insert(GigaChadDrinksDB.sessions, session)
 return session
@@ -143,7 +149,18 @@ frame:RegisterEvent("ENCOUNTER_END")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        CloseAbandonedSessions()
+        local function CloseAbandonedSessions()
+    for _, session in ipairs(GigaChadDrinksDB.sessions) do
+        if not session.endTimestamp then
+            session.endTimestamp = time()
+            session.duration =
+                session.endTimestamp - session.timestamp
+
+            session.status = "ABANDONED"
+            session.abandoned = true
+        end
+    end
+end
         SaveCharacterSnapshot()
         SaveGearSnapshot()
         StartCombatLog()
@@ -481,13 +498,21 @@ startSessionButton:SetText("SESSION STARTEN")
 
 startSessionButton:SetScript("OnClick", function()
     if activeSession then
-        activeSession.endTimestamp = time()
-        StopCombatLog()
+    activeSession.endTimestamp = time()
+    activeSession.status = "COMPLETED"
+    activeSession.duration =
+        activeSession.endTimestamp - activeSession.timestamp
 
-        print("|cff00ff00Giga Chad Drinks:|r Session beendet.")
+    StopCombatLog()
 
-        activeSession = nil
-        startSessionButton:SetText("SESSION STARTEN")
+    print(
+        "|cff00ff00Giga Chad Drinks:|r Session beendet. | Dauer: " ..
+        tostring(activeSession.duration) ..
+        " Sekunden"
+    )
+
+    activeSession = nil
+    startSessionButton:SetText("SESSION STARTEN")
     else
         SaveCharacterSnapshot()
         SaveGearSnapshot()
