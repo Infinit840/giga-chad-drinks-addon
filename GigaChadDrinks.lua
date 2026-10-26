@@ -101,10 +101,7 @@ local function StartCombatLog()
         print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
     end
 end
-local function StopCombatLog()
-    LoggingCombat(false)
-    print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
-end
+
 local function StopCombatLog()
     LoggingCombat(false)
     combatLogActive = false
@@ -120,8 +117,11 @@ end
 local function SaveSession()
     GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
     local instanceName, instanceType, difficultyID, difficultyName = GetInstanceInfo()
-    local session = {
-    timestamp = time(),
+    local sessionStart = time()
+
+local session = {
+    sessionID = tostring(sessionStart),
+    timestamp = sessionStart,
     encounters = {},
     zone = GetZoneText(),
     subZone = GetSubZoneText(),
@@ -140,6 +140,7 @@ end
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("ENCOUNTER_START")
 frame:RegisterEvent("ENCOUNTER_END")
+
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         CloseAbandonedSessions()
@@ -155,13 +156,27 @@ frame:SetScript("OnEvent", function(self, event, ...)
     if activeSession then
         activeSession.encounters = activeSession.encounters or {}
 
-        activeEncounter = {
-            encounterID = encounterID,
-            name = encounterName,
-            difficultyID = difficultyID,
-            groupSize = groupSize,
-            startTimestamp = time()
-        }
+activeEncounter = {
+    -- Encounter-Identität
+    encounterID = encounterID,
+    name = encounterName,
+    difficultyID = difficultyID,
+
+    -- Zeit
+    startTimestamp = time(),
+    endTimestamp = nil,
+    duration = nil,
+
+    -- Ergebnis
+    success = nil,
+    result = "ACTIVE",
+
+    -- Gruppe
+    groupSize = groupSize,
+    group = GetGroupSnapshot()
+
+    -- Combat-Daten werden extern aus dem WoWCombatLog analysiert
+}
 
         table.insert(activeSession.encounters, activeEncounter)
     end
@@ -183,11 +198,16 @@ frame:SetScript("OnEvent", function(self, event, ...)
     end
 
     if activeEncounter and activeEncounter.encounterID == encounterID then
-        activeEncounter.endTimestamp = time()
-        activeEncounter.success = success == 1
-        activeEncounter.result = result
-        activeEncounter = nil
-    end
+    activeEncounter.endTimestamp = time()
+
+    activeEncounter.duration =
+        activeEncounter.endTimestamp - activeEncounter.startTimestamp
+
+    activeEncounter.success = success == 1
+    activeEncounter.result = result
+
+    activeEncounter = nil
+end
 
     print(
         "|cff00ff00Giga Chad Drinks:|r Encounter beendet: " ..
