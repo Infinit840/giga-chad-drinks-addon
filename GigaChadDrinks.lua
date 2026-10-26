@@ -3,6 +3,9 @@ GigaChadDrinksDB = GigaChadDrinksDB or {}
 GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
 local activeSession = nil
 local combatLogActive = false
+local activeSession = nil
+local activeEncounter = nil
+local combatLogActive = false
 
 local function SaveCharacterSnapshot()
     local name, realm = UnitFullName("player")
@@ -119,6 +122,7 @@ local function SaveSession()
     local instanceName, instanceType, difficultyID, difficultyName = GetInstanceInfo()
     local session = {
     timestamp = time(),
+    encounters = {},
     zone = GetZoneText(),
     subZone = GetSubZoneText(),
     instanceName = instanceName,
@@ -134,22 +138,66 @@ local function SaveSession()
 return session
 end
 frame:RegisterEvent("PLAYER_LOGIN")
-frame:SetScript("OnEvent", function()
-    CloseAbandonedSessions()
-    SaveCharacterSnapshot()
-    SaveGearSnapshot()
-    StartCombatLog()
+frame:RegisterEvent("ENCOUNTER_START")
+frame:RegisterEvent("ENCOUNTER_END")
+frame:SetScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_LOGIN" then
+        CloseAbandonedSessions()
+        SaveCharacterSnapshot()
+        SaveGearSnapshot()
+        StartCombatLog()
 
-    print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
+        print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
+
+    elseif event == "ENCOUNTER_START" then
+    local encounterID, encounterName, difficultyID, groupSize = ...
+
+    if activeSession then
+        activeSession.encounters = activeSession.encounters or {}
+
+        activeEncounter = {
+            encounterID = encounterID,
+            name = encounterName,
+            difficultyID = difficultyID,
+            groupSize = groupSize,
+            startTimestamp = time()
+        }
+
+        table.insert(activeSession.encounters, activeEncounter)
+    end
+
+    print(
+        "|cff00ff00Giga Chad Drinks:|r Encounter gestartet: " ..
+        tostring(encounterName) ..
+        " | ID: " .. tostring(encounterID) ..
+        " | Spieler: " .. tostring(groupSize)
+    )
+
+    elseif event == "ENCOUNTER_END" then
+    local encounterID, encounterName, difficultyID, groupSize, success = ...
+
+    local result = "WIPE"
+
+    if success == 1 then
+        result = "KILL"
+    end
+
+    if activeEncounter and activeEncounter.encounterID == encounterID then
+        activeEncounter.endTimestamp = time()
+        activeEncounter.success = success == 1
+        activeEncounter.result = result
+        activeEncounter = nil
+    end
+
+    print(
+        "|cff00ff00Giga Chad Drinks:|r Encounter beendet: " ..
+        tostring(encounterName) ..
+        " | " .. result
+    )
+end
 end)
 
-frame:SetScript("OnEvent", function()
-    SaveCharacterSnapshot()
-    SaveGearSnapshot()
-    StartCombatLog()
 
-    print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
-end)
 
 
 
@@ -458,11 +506,11 @@ UpdateLogsPanel = function()
     local sessionCount = #GigaChadDrinksDB.sessions
 
     local combatLogStatus
- if combatLogActive then
-    combatLogStatus = "|cff00ff00AKTIV|r"
- else
-    combatLogStatus = "|cffff0000INAKTIV|r"
- end
+    if combatLogActive then
+        combatLogStatus = "|cff00ff00AKTIV|r"
+    else
+        combatLogStatus = "|cffff0000INAKTIV|r"
+    end
 
     local sessionStatus
     if activeSession then
@@ -499,6 +547,12 @@ UpdateLogsPanel = function()
             groupSize = #activeSession.group
         end
 
+        local encounterCount = 0
+
+        if activeSession.encounters then
+            encounterCount = #activeSession.encounters
+        end
+
         table.insert(lines, "")
         table.insert(lines, "AKTUELLE SESSION")
         table.insert(lines, "")
@@ -506,7 +560,51 @@ UpdateLogsPanel = function()
         table.insert(lines, "Instanz: " .. (activeSession.instanceName or "Keine"))
         table.insert(lines, "Gruppe: " .. tostring(groupSize) .. " Spieler")
         table.insert(lines, "Laufzeit: " .. durationText)
+        table.insert(lines, "Encounters: " .. tostring(encounterCount))
+
+        if encounterCount > 0 then
+            table.insert(lines, "")
+            table.insert(lines, "LETZTE ENCOUNTERS")
+            table.insert(lines, "")
+
+            local firstEncounter = math.max(1, encounterCount - 4)
+
+            for i = encounterCount, firstEncounter, -1 do
+                local encounter = activeSession.encounters[i]
+
+                local encounterDurationText = "Läuft..."
+
+                if encounter.endTimestamp then
+                    local encounterDuration =
+                        encounter.endTimestamp - encounter.startTimestamp
+
+                    local encounterMinutes =
+                        math.floor(encounterDuration / 60)
+
+                    local encounterSeconds =
+                        encounterDuration % 60
+
+                    encounterDurationText = string.format(
+                        "%02d:%02d",
+                        encounterMinutes,
+                        encounterSeconds
+                    )
+                end
+
+                local result = encounter.result or "AKTIV"
+
+                table.insert(
+                    lines,
+                    (encounter.name or "Unbekannter Boss") ..
+                    " | " ..
+                    result ..
+                    " | " ..
+                    encounterDurationText
+                )
+            end
+        end
     end
+
     if sessionCount > 0 then
         table.insert(lines, "")
         table.insert(lines, "LETZTE SESSIONS")
@@ -522,8 +620,9 @@ UpdateLogsPanel = function()
 
             local durationText = "Abgebrochen"
 
-    if session.endTimestamp then
-                local duration = session.endTimestamp - session.timestamp
+            if session.endTimestamp then
+                local duration =
+                    session.endTimestamp - session.timestamp
 
                 local hours = math.floor(duration / 3600)
                 local minutes = math.floor((duration % 3600) / 60)
@@ -547,6 +646,7 @@ UpdateLogsPanel = function()
             )
         end
     end
+
     logsText:SetText(table.concat(lines, "\n"))
 end
 local logsUpdateTimer = 0
