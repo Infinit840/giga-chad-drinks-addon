@@ -207,6 +207,7 @@ local tabs = {}
 local panels = {}
 local UpdateCharacterPanel
 local UpdateGroupPanel
+local UpdateLogsPanel
 local tabNames = {
     "Session",
     "Gruppe",
@@ -237,6 +238,10 @@ local function SelectTab(selectedTab)
 
     if selectedTab == 3 and UpdateCharacterPanel then
         UpdateCharacterPanel()
+    end
+
+    if selectedTab == 4 and UpdateLogsPanel then
+        UpdateLogsPanel()
     end
 end
 
@@ -410,6 +415,35 @@ UpdateCharacterPanel = function()
         "ITEMLEVEL\n" ..
         "Ausgerüstet: " .. string.format("%.1f", character.equippedItemLevel or 0) .. "\n" ..
         "Durchschnitt: " .. string.format("%.1f", character.averageItemLevel or 0)
+    )
+end
+-- Logs-Tab
+local logsText = panels[4]:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+logsText:SetPoint("TOPLEFT", panels[4], "TOPLEFT", 20, -20)
+logsText:SetJustifyH("LEFT")
+
+UpdateLogsPanel = function()
+    local sessionCount = #GigaChadDrinksDB.sessions
+
+    local combatLogStatus
+    if LoggingCombat() then
+        combatLogStatus = "|cff00ff00AKTIV|r"
+    else
+        combatLogStatus = "|cffff0000INAKTIV|r"
+    end
+
+    local sessionStatus
+    if activeSession then
+        sessionStatus = "|cff00ff00AKTIV|r"
+    else
+        sessionStatus = "|cffff0000INAKTIV|r"
+    end
+
+    logsText:SetText(
+        "LOGS\n\n" ..
+        "Combatlog: " .. combatLogStatus .. "\n" ..
+        "Session: " .. sessionStatus .. "\n\n" ..
+        "Gespeicherte Sessions: " .. tostring(sessionCount)
     )
 end
 SlashCmdList["GIGACHADDRINKS"] = function()
