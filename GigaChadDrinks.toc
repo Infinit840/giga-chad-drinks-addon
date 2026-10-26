@@ -3,6 +3,6 @@
 ## Notes: Chads Together. Legends Forever.
 ## Author: Infinit840
 ## Version: 0.1.0
+## SavedVariables: GigaChadDrinksDB
 
 GigaChadDrinks.lua
-## SavedVariables: GigaChadDrinksDB
