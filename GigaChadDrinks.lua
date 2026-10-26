@@ -77,6 +77,19 @@ local function GetGroupSnapshot()
 
     return group
 end
+local function StartCombatLog()
+    local success = LoggingCombat(true)
+
+    if success then
+        print("|cff00ff00Giga Chad Drinks:|r Combatlog gestartet.")
+    else
+        print("|cffff0000Giga Chad Drinks:|r Combatlog konnte nicht gestartet werden.")
+    end
+end
+local function StopCombatLog()
+    LoggingCombat(false)
+    print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
+end
 local function SaveSession()
     GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
     local instanceName, instanceType, difficultyID, difficultyName = GetInstanceInfo()
@@ -101,7 +114,7 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function()
     SaveCharacterSnapshot()
     SaveGearSnapshot()
-    
+    StartCombatLog()
 
     print("|cff00ff00Giga Chad Drinks:|r Die Bar ist geöffnet.")
 end)
@@ -126,7 +139,7 @@ chadWindow.text = chadWindow:CreateFontString(nil, "OVERLAY", "GameFontNormalLar
 chadWindow.text:SetPoint("CENTER", 0, 10)
 chadWindow.text:SetText("Die Bar ist geöffnet.")
 
-SlashCmdList["GIGACHADDRINKS"] = function()
+
   local startSessionButton = CreateFrame("Button", nil, chadWindow, "UIPanelButtonTemplate")
 startSessionButton:SetSize(160, 30)
 startSessionButton:SetPoint("CENTER", 0, -40)
@@ -135,6 +148,7 @@ startSessionButton:SetText("SESSION STARTEN")
 startSessionButton:SetScript("OnClick", function()
     if activeSession then
         activeSession.endTimestamp = time()
+        StopCombatLog()
 
         print("|cff00ff00Giga Chad Drinks:|r Session beendet.")
 
@@ -143,32 +157,8 @@ startSessionButton:SetScript("OnClick", function()
     else
         SaveCharacterSnapshot()
         SaveGearSnapshot()
-        local function GetGroupSnapshot()
-    local group = {}
-    local playerName, playerRealm = UnitFullName("player")
+        StartCombatLog()
 
-table.insert(group, {
-    name = playerName,
-    realm = playerRealm
-})
-
-    if IsInGroup() then
-        for i = 1, GetNumGroupMembers() - 1 do
-            local unit = "party" .. i
-
-            if UnitExists(unit) then
-                local name, realm = UnitFullName(unit)
-
-                table.insert(group, {
-                    name = name,
-                    realm = realm
-                })
-            end
-        end
-    end
-
-    return group
-end
         activeSession = SaveSession()
 
         startSessionButton:SetText("SESSION BEENDEN")
@@ -176,6 +166,7 @@ end
         print("|cff00ff00Giga Chad Drinks:|r Session gestartet.")
     end
 end)
+SlashCmdList["GIGACHADDRINKS"] = function()
     if chadWindow:IsShown() then
         chadWindow:Hide()
     else
