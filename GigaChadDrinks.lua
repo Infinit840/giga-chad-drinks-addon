@@ -375,6 +375,16 @@ chadWindow.title:SetText("GIGA CHAD DRINKS")
 local subtitle = header:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 subtitle:SetPoint("TOPLEFT", chadWindow.title, "BOTTOMLEFT", 0, -2)
 subtitle:SetText("Chads Together. Legends Forever.")
+
+-- Schließen-Button oben rechts
+local closeButton = CreateFrame("Button", nil, header, "UIPanelCloseButton")
+closeButton:SetSize(28, 28)
+closeButton:SetPoint("RIGHT", header, "RIGHT", -6, 0)
+
+-- Eigenes OnClick: Die Vorlage würde sonst nur den Header ausblenden
+closeButton:SetScript("OnClick", function()
+    chadWindow:Hide()
+end)
 local tabs = {}
 local panels = {}
 local UpdateCharacterPanel
