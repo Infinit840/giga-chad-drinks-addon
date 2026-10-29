@@ -107,10 +107,22 @@ local function StopCombatLog()
     combatLogActive = false
     print("|cff00ff00Giga Chad Drinks:|r Combatlog beendet.")
 end
+-- Beim Login kann keine Session mehr laufen. Sessions ohne Ende wurden
+-- durch Logout, /reload oder Absturz abgebrochen.
+-- endTimestamp bleibt leer, weil der echte Endzeitpunkt unbekannt ist.
 local function CloseAbandonedSessions()
+    GigaChadDrinksDB.sessions = GigaChadDrinksDB.sessions or {}
+
     for _, session in ipairs(GigaChadDrinksDB.sessions) do
-        if not session.endTimestamp then
+        if not session.endTimestamp and session.status ~= "ABANDONED" then
+            session.status = "ABANDONED"
             session.abandoned = true
+
+            for _, encounter in ipairs(session.encounters or {}) do
+                if encounter.result == "ACTIVE" then
+                    encounter.result = "ABANDONED"
+                end
+            end
         end
     end
 end
@@ -149,18 +161,7 @@ frame:RegisterEvent("ENCOUNTER_END")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        local function CloseAbandonedSessions()
-    for _, session in ipairs(GigaChadDrinksDB.sessions) do
-        if not session.endTimestamp then
-            session.endTimestamp = time()
-            session.duration =
-                session.endTimestamp - session.timestamp
-
-            session.status = "ABANDONED"
-            session.abandoned = true
-        end
-    end
-end
+        CloseAbandonedSessions()
         SaveCharacterSnapshot()
         SaveGearSnapshot()
         StartCombatLog()
